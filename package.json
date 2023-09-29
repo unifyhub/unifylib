@@ -1,0 +1,14 @@
+{
+  "type": "module",
+  "dependencies": {
+    "@google/clasp": "^2.4.2",
+    "@types/google-apps-script": "^1.0.72",
+    "acorn": "^8.10.0",
+    "comment-parser": "^1.4.0",
+    "reflect-metadata": "^0.1.13",
+    "typescript": "^5.2.2"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.1"
+  }
+}

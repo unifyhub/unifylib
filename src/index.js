@@ -1,0 +1,4 @@
+var API = {
+  GitHub,
+  OpenAI
+};

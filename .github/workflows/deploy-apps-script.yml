@@ -19,7 +19,7 @@ jobs:
       - name: Login to Google Apps Script
         run: |
           echo $CREDENTIALS > $HOME/.clasprc.json
-          npx clasp --status
+          npx clasp login --status
         env:
           CREDENTIALS: ${{ secrets.CREDENTIALS }}
 

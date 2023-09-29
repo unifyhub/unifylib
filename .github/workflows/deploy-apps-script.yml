@@ -1,0 +1,33 @@
+name: Deploy Google Apps Script
+
+on:
+  push:
+    branches:
+      - main # Change this to the branch you want to trigger deployments from
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install clasp
+        run: npm install -g @google/clasp
+
+      - name: Login to Google Apps Script
+        run: |
+          echo $CREDENTIALS > $HOME/.clasprc.json
+          npx clasp --status
+        env:
+          CREDENTIALS: ${{ secrets.CREDENTIALS }}
+
+      - name: Push code to Google Apps Script
+        run: npx clasp push
+
+      - name: Push code to Google Apps Script
+        run: npx clasp push
+
+      - name: Delete creds.json
+        run: rm creds.json

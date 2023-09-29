@@ -20,7 +20,7 @@ jobs:
         run: |
           echo $CREDENTIALS > $HOME/.clasprc.json
           echo $CREDENTIALS > .clasprc.json
-          npx clasp login --status
+          npx clasp login --creds .clasprc.json --status
         env:
           CREDENTIALS: ${{ secrets.CREDENTIALS }}
 

@@ -1,20 +1,21 @@
-GitHub = {
+import {Unify} from "../../unify/utils.js";
+
+const GitHub = {
 	url: null,
 	key: null,
 
 	connect: function (credentials) {
-		this.url = credentials.url;
-		this.key = credentials.secret;
-		return this;
+		GitHub.url = credentials.url;
+		GitHub.key = credentials.key;
 	},
 
 	isConnected: function () {
-		return this.url !== null && this.key !== null;
+		return GitHub.url !== null && GitHub.key !== null;
 	},
 
-	_makeRequest: function (endpoint, method, payload) {
+	_makeRequest: async function (endpoint, method, payload) {
 		var headers = {
-			"Authorization": "Bearer " + this.key,
+			"Authorization": "Bearer " + GitHub.key,
 			"Accept": "application/vnd.github+json",
 			"Content-Type": "application/json"
 		};
@@ -26,11 +27,16 @@ GitHub = {
 		};
 
 		if (payload) {
-			options.payload = JSON.stringify(payload);
+			options.body = JSON.stringify(payload);
 		}
 
-		var response = UrlFetchApp.fetch(this.url + endpoint, options);
-		return JSON.parse(response.getContentText());
+		try {
+			const response = await Unify.Request.fetch(GitHub.url + endpoint, options);
+			return JSON.parse(await response.text());
+		} catch (error) {
+			console.error("Error during request to", endpoint, ":", error.message);
+			throw error; // or handle error as appropriate for your use case
+		}
 	},
 
 	addFile: {
@@ -62,14 +68,20 @@ GitHub = {
 				}
 			};
 		},
-		execute: function (options) {
-			var endpoint = "/contents/" + options.path;
-			var payload = {
-				"message": options.commitMessage,
-				"content": Utilities.base64Encode(options.content),
-				"branch": options.branch
-			};
-			return this._makeRequest(endpoint, "PUT", payload);
+		execute: async function (options) {
+			try {
+				var endpoint = "/contents/" + options.path;
+				var payload = {
+					"message": options.commitMessage,
+					"content": Utilities.base64Encode(options.content),
+					"branch": options.branch
+				};
+				// Awaiting the asynchronous _makeRequest method
+				return await GitHub._makeRequest(endpoint, "PUT", payload);
+			} catch (error) {
+				console.error("Execution failed:", error.message);
+				throw error; // or handle error accordingly
+			}
 		},
 	},
 
@@ -106,7 +118,7 @@ GitHub = {
 				}
 			};
 		},
-		execute: function (options) {
+		execute: async function (options) {
 			var endpoint = "/contents/" + options.path;
 			var payload = {
 				"message": options.message,
@@ -114,7 +126,13 @@ GitHub = {
 				"sha": options.sha,
 				"branch": options.branch
 			};
-			return this._makeRequest(endpoint, "PUT", payload);
+			// Await here to resolve the Promise before returning from this function
+			try {
+				return await GitHub._makeRequest(endpoint, "PUT", payload);
+			} catch (error) {
+				console.error("Execution failed:", error.message);
+				throw error; // or handle it in some other way
+			}
 		},
 	},
 
@@ -147,14 +165,19 @@ GitHub = {
 				}
 			};
 		},
-		execute: function (options) {
+		execute: async function (options) {
 			var endpoint = "/contents/" + options.path;
 			var payload = {
 				"message": options.commitMessage,
 				"sha": options.sha,
 				"branch": options.branch
 			};
-			return this._makeRequest(endpoint, "DELETE", payload);
+			try {
+				return await GitHub._makeRequest(endpoint, "DELETE", payload);
+			} catch (error) {
+				console.error("Execution failed:", error.message);
+				throw error; // or handle error as suitable for your use case
+			}
 		},
 	},
 
@@ -187,7 +210,7 @@ GitHub = {
 				}
 			};
 		},
-		execute: function (options) {
+		execute: async function (options) {
 			var endpoint = "/pulls";
 			var payload = {
 				"title": options.title,
@@ -195,8 +218,14 @@ GitHub = {
 				"base": options.targetBranch,
 				"body": options.body
 			};
-			return this._makeRequest(endpoint, "POST", payload);
+			try {
+				return await GitHub._makeRequest(endpoint, "POST", payload);
+			} catch (error) {
+				console.error("Execution failed:", error.message);
+				throw error; // or handle error accordingly
+			}
 		},
+
 	},
 
 	getIssue: {
@@ -216,10 +245,16 @@ GitHub = {
 				}
 			};
 		},
-		execute: function (options) {
+		execute: async function (options) {
 			var endpoint = "/issues/" + options.issueNumber;
-			return this._makeRequest(endpoint, "GET");
+			try {
+				return await GitHub._makeRequest(endpoint, "GET");
+			} catch (error) {
+				console.error("Execution failed:", error.message);
+				throw error; // or handle error as suitable for your use case
+			}
 		},
+
 	},
 
 	closeIssue: {
@@ -243,13 +278,19 @@ GitHub = {
 				}
 			};
 		},
-		execute: function (options) {
+		execute: async function (options) {
 			var endpoint = "/issues/" + options.issueNumber;
 			var payload = {
 				"state": "closed",
 				"branch": options.branch
 			};
-			return this._makeRequest(endpoint, "PATCH", payload);
+
+			try {
+				return await GitHub._makeRequest(endpoint, "PATCH", payload);
+			} catch (error) {
+				console.error("Execution failed:", error.message);
+				throw error;
+			}
 		},
 	},
 
@@ -261,9 +302,15 @@ GitHub = {
 				"parameters": {}
 			};
 		},
-		execute: function () {
+		execute: async function () {
 			var endpoint = "/branches";
-			return this._makeRequest(endpoint, "GET");
+
+			try {
+				return await GitHub._makeRequest(endpoint, "GET");
+			} catch (error) {
+				console.error("Execution failed:", error.message);
+				throw error;
+			}
 		},
 	},
 
@@ -284,12 +331,17 @@ GitHub = {
 				}
 			};
 		},
-		execute: function (options) {
+		execute: async function (options) {
 			var endpoint = "/commits";
 			if (options.branch) {
 				endpoint += "?sha=" + options.branch;
 			}
-			return this._makeRequest(endpoint, "GET");
+			try {
+				return await GitHub._makeRequest(endpoint, "GET");
+			} catch (error) {
+				console.error("Execution failed:", error.message);
+				throw error;
+			}
 		},
 	},
 
@@ -310,9 +362,14 @@ GitHub = {
 				}
 			};
 		},
-		execute: function (options) {
+		execute: async function (options) {
 			var endpoint = "/commits/" + options.sha;
-			return this._makeRequest(endpoint, "GET");
+			try {
+				return await GitHub._makeRequest(endpoint, "GET");
+			} catch (error) {
+				console.error("Execution failed:", error.message);
+				throw error;
+			}
 		},
 	},
 
@@ -337,13 +394,18 @@ GitHub = {
 				}
 			};
 		},
-		execute: function (options) {
+		execute: async function (options) {
 			var endpoint = "/git/refs";
 			var payload = {
 				"ref": "refs/heads/" + options.newBranchName,
 				"sha": options.startPointSha
 			};
-			return this._makeRequest(endpoint, "POST", payload);
+			try {
+				return await GitHub._makeRequest(endpoint, "POST", payload);
+			} catch (error) {
+				console.error("Execution failed:", error.message);
+				throw error;
+			}
 		},
 	},
 
@@ -364,10 +426,17 @@ GitHub = {
 				}
 			};
 		},
-		execute: function (options) {
+		execute: async function (options) {
 			var endpoint = "/git/refs/heads/" + options.branchName;
-			return this._makeRequest(endpoint, "DELETE");
+
+			try {
+				return await GitHub._makeRequest(endpoint, "DELETE");
+			} catch (error) {
+				console.error("Execution failed:", error.message);
+				throw error;
+			}
 		},
+
 	},
 
 	listTags: {
@@ -378,9 +447,15 @@ GitHub = {
 				"parameters": {}
 			};
 		},
-		execute: function (options) {
+		execute: async function (options) {
 			var endpoint = "/tags";
-			return this._makeRequest(endpoint, "GET");
+
+			try {
+				return await GitHub._makeRequest(endpoint, "GET");
+			} catch (error) {
+				console.error("Execution failed:", error.message);
+				throw error;
+			}
 		},
 	},
 
@@ -409,7 +484,7 @@ GitHub = {
 				"events": ["push", "pull_request"],
 				"active": true
 			};
-			return this._makeRequest(endpoint, "POST", payload);
+			return GitHub._makeRequest(endpoint, "POST", payload);
 		},
 	},
 
@@ -430,9 +505,15 @@ GitHub = {
 				}
 			};
 		},
-		execute: function (options) {
+		execute: async function (options) {
 			var endpoint = "/hooks/" + options.hookId;
-			return this._makeRequest(endpoint, "DELETE");
+
+			try {
+				return await GitHub._makeRequest(endpoint, "DELETE");
+			} catch (error) {
+				console.error("Execution failed:", error.message);
+				throw error;
+			}
 		},
 	},
 
@@ -457,18 +538,24 @@ GitHub = {
 				}
 			};
 		},
-		execute: function (options) {
+		execute: async function (options) {
 			var endpoint = "/contents/" + options.path;
 
 			if (options.branch) {
 				endpoint += "?ref=" + options.branch;
 			}
 
-			var response = this._makeRequest(endpoint, "GET");
-			// The content is returned as base64 encoded, so we decode it before returning.
-			response.contentDecoded = Utilities.newBlob(Utilities.base64Decode(response.content)).getDataAsString();
-			return response;
+			try {
+				const response = await GitHub._makeRequest(endpoint, "GET");
+				// The content is returned as base64 encoded, so we decode it before returning.
+				response.contentDecoded = Utilities.newBlob(Utilities.base64Decode(response.content)).getDataAsString();
+				return response;
+			} catch (error) {
+				console.error("Execution failed:", error.message);
+				throw error;
+			}
 		},
+
 	},
 
 	listDirectoryContents: {
@@ -492,16 +579,23 @@ GitHub = {
 				}
 			};
 		},
-		execute: function (options) {
+		execute: async function (options) {
 			var pathQuery = options.path ? "?path=" + options.path : ".";
-			var contents = this._makeRequest("/contents/" + pathQuery + "&ref=" + options.branchName, "GET");
-			var results = [];
-			for (var i = 0; i < contents.length; i++) {
-				results.push(contents[i].name);
+			try {
+				var contents = await GitHub._makeRequest("/contents/" + pathQuery + "&ref=" + options.branchName, "GET");
+				var results = [];
+				for (var i = 0; i < contents.length; i++) {
+					results.push(contents[i].name);
+				}
+				return results;
+			} catch (error) {
+				console.error("Execution failed:", error.message);
+				throw error;
 			}
-			return results;
 		},
 	},
 
 }
+
+export default GitHub
 

@@ -1,6 +1,28 @@
 {
   "type": "module",
+  "scripts": {
+    "build": "webpack --mode production"
+  },
+  "_moduleAliases": {
+    "@unify": "src/unify"
+  },
+  "main": "src/index.js",
   "dependencies": {
-    "@types/google-apps-script": "^1.0.72"
+    "@types/google-apps-script": "^1.0.74",
+    "cheerio": "^1.0.0-rc.12",
+    "glob": "^10.3.10",
+    "googleapis": "^126.0.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.23.2",
+    "@babel/preset-env": "^7.23.2",
+    "babel-loader": "^9.1.3",
+    "buble-loader": "^0.5.1",
+    "copy-webpack-plugin": "^11.0.0",
+    "lodash": "^4.17.21",
+    "module-alias": "^2.2.3",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4",
+    "webpack-plugin-serve": "^1.6.0"
   }
 }

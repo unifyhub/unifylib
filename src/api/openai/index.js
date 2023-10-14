@@ -1,15 +1,16 @@
-OpenAI = {
+import {Unify} from "../../unify/utils.js";
+
+const OpenAI = {
 		url: null,
 		key: null,
 
 		connect: function (credentials) {
-			this.url = credentials.url;
-			this.key = credentials.secret;
-			return this;
+			OpenAI.url = credentials.url;
+			OpenAI.key = credentials.key;
 		},
 
 		isConnected: function () {
-			return this.url !== null && this.key !== null;
+			return OpenAI.url !== null && OpenAI.key !== null;
 		},
 
 		chatGpt: {
@@ -101,76 +102,67 @@ OpenAI = {
 					required: ["messages"],
 				};
 			},
-
-			execute: function (options) {
-				// Construct the payload based on provided options
-				var payload = {
+			execute: async function (options) {
+				const payload = {
 					"model": options.model || "gpt-3.5-turbo",
 					"messages": options.messages,
 				};
-
-				// Add optional properties to the payload only if they are provided in options
-				["temperature", "top_p", "n", "stream", "stop", "max_tokens", "presence_penalty", "frequency_penalty", "logit_bias", "user", "functions", "function_call"].forEach(function (key) {
+				["temperature", "top_p", "n", "stream", "stop", "max_tokens",
+					"presence_penalty", "frequency_penalty", "logit_bias",
+					"user", "functions", "function_call"].forEach((key) => {
 					if (options.hasOwnProperty(key)) {
 						payload[key] = options[key];
 					}
 				});
-
-				var apiUrl = API.OpenAI.url;
-				var headers = {
-					"Authorization": "Bearer " + API.OpenAI.key,
+				const apiUrl = OpenAI.url;
+				const headers = {
+					"Authorization": "Bearer " + OpenAI.key,
 					"Content-Type": "application/json",
 				};
-
-				var requestOptions = {
+				const requestOptions = {
 					"method": "POST",
 					"headers": headers,
-					"payload": JSON.stringify(payload),
-					"muteHttpExceptions": true,
+					"body": JSON.stringify(payload),
 				};
-
-				var maxRetries = options.retries || 3;
-				var attempt = 0;
-				var jsonResponse = null;
-
+				const maxRetries = options.retries || 3;
+				let attempt = 0;
+				let jsonResponse = null;
 				while (attempt < maxRetries) {
-					var response = UrlFetchApp.fetch(apiUrl, requestOptions);
-					jsonResponse = JSON.parse(response.getContentText());
-
-					if (jsonResponse.choices && jsonResponse.choices.length > 0) {
-						const responseMessage = jsonResponse.choices[0].message;
-
-						if (responseMessage.function_call) {
-							// Use provided availableFunctions or fallback to empty object
-							const availableFunctions = options.availableFunctions || {};
-
-							const functionName = responseMessage.function_call.name;
-							const functionArgs = responseMessage.function_call.arguments;
-							const functionToCall = availableFunctions[functionName];
-
-							// Check if the function exists and is callable
-							if (typeof functionToCall === "function") {
-								const functionResponse = functionToCall(functionArgs);
-								options.messages.push(responseMessage);
-								options.messages.push({
-									"role": "function",
-									"name": functionName,
-									"content": functionResponse,
-								});
-
-								// Recursive call to continue the conversation with the updated messages
-								return API.OpenAI.chatGpt.execute(options);
+					try {
+						const response = await Unify.Request.fetch(apiUrl, requestOptions);
+						jsonResponse = JSON.parse(await response.text());
+						if (jsonResponse.choices && jsonResponse.choices.length > 0) {
+							const responseMessage = jsonResponse.choices[0].message;
+							if (responseMessage.function_call) {
+								const availableFunctions = options.availableFunctions || {};
+								const functionName = responseMessage.function_call.name;
+								const functionArgs = responseMessage.function_call.arguments;
+								const functionToCall = availableFunctions[functionName];
+								if (typeof functionToCall === "function") {
+									const functionResponse = functionToCall(functionArgs);
+									options.messages.push(responseMessage);
+									options.messages.push({
+										"role": "function",
+										"name": functionName,
+										"content": functionResponse,
+									});
+									return OpenAI.chatGpt.execute(options);
+								} else {
+									return `Error: Function "${functionName}" is not available or not a function.`;
+								}
 							} else {
-								return `Error: Function "${functionName}" is not available or not a function.`;
+								return responseMessage.content;
 							}
-						} else {
-							return responseMessage.content;
 						}
-					} else {
+					} catch (error) {
+						console.error('Error on attempt', attempt + 1, ':', error.message);
 						attempt++;
 					}
 				}
-				return "Error: " + (jsonResponse.error ? jsonResponse.error.message : "Unknown error after " + maxRetries + " retries.");
-			},
+				return "Error: " + (jsonResponse && jsonResponse.error ? jsonResponse.error.message : "Unknown error after " + maxRetries + " retries.");
+			}
 		},
 };
+
+
+export default OpenAI
